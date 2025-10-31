@@ -105,9 +105,9 @@ class PSMNet(nn.Module):
         refimg_fea     = self.feature_extraction(left)
         targetimg_fea  = self.feature_extraction(right)
 
-
+        device = refimg_fea.device
         #matching
-        cost = Variable(torch.FloatTensor(refimg_fea.size()[0], refimg_fea.size()[1]*2, self.maxdisp//4,  refimg_fea.size()[2],  refimg_fea.size()[3]).zero_()).cuda()
+        cost = Variable(torch.FloatTensor(refimg_fea.size()[0], refimg_fea.size()[1]*2, self.maxdisp//4,  refimg_fea.size()[2],  refimg_fea.size()[3]).zero_()).to(device)
 
         for i in range(self.maxdisp//4):
             if i > 0 :
@@ -116,6 +116,7 @@ class PSMNet(nn.Module):
             else:
              cost[:, :refimg_fea.size()[1], i, :,:]   = refimg_fea
              cost[:, refimg_fea.size()[1]:, i, :,:]   = targetimg_fea
+
         cost = cost.contiguous()
 
         cost0 = self.dres0(cost)
@@ -140,11 +141,11 @@ class PSMNet(nn.Module):
 
             cost1 = torch.squeeze(cost1,1)
             pred1 = F.softmax(cost1,dim=1)
-            pred1 = disparityregression(self.maxdisp)(pred1)
+            pred1 = disparityregression(self.maxdisp,device)(pred1)
 
             cost2 = torch.squeeze(cost2,1)
             pred2 = F.softmax(cost2,dim=1)
-            pred2 = disparityregression(self.maxdisp)(pred2)
+            pred2 = disparityregression(self.maxdisp,device)(pred2)
 
         cost3 = F.upsample(cost3, [self.maxdisp,left.size()[2],left.size()[3]], mode='trilinear')
         cost3 = torch.squeeze(cost3,1)
@@ -152,7 +153,7 @@ class PSMNet(nn.Module):
         #For your information: This formulation 'softmax(c)' learned "similarity" 
         #while 'softmax(-c)' learned 'matching cost' as mentioned in the paper.
         #However, 'c' or '-c' do not affect the performance because feature-based cost volume provided flexibility.
-        pred3 = disparityregression(self.maxdisp)(pred3)
+        pred3 = disparityregression(self.maxdisp,device)(pred3)
 
         if self.training:
             return pred1, pred2, pred3

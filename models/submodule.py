@@ -43,9 +43,9 @@ class BasicBlock(nn.Module):
         return out
 
 class disparityregression(nn.Module):
-    def __init__(self, maxdisp):
+    def __init__(self, maxdisp, device):
         super(disparityregression, self).__init__()
-        self.disp = torch.Tensor(np.reshape(np.array(range(maxdisp)),[1, maxdisp,1,1])).cuda()
+        self.disp = torch.Tensor(np.reshape(np.array(range(maxdisp)),[1, maxdisp,1,1])).to(device)
 
     def forward(self, x):
         out = torch.sum(x*self.disp.data,1, keepdim=True)
@@ -104,27 +104,26 @@ class feature_extraction(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        output      = self.firstconv(x)
-        output      = self.layer1(output)
-        output_raw  = self.layer2(output)
-        output      = self.layer3(output_raw)
-        output_skip = self.layer4(output)
+        output      = self.firstconv(x) #[1,32,128,256]
+        output      = self.layer1(output) #[1,32,128,256]
+        output_raw  = self.layer2(output) #[1,64,64,128]
+        output      = self.layer3(output_raw) #[1,128,64,128]
+        output_skip = self.layer4(output) #[1,128,64,128]
 
+        output_branch1 = self.branch1(output_skip) #[1,32,1,2]
+        output_branch1 = F.upsample(output_branch1, (output_skip.size()[2],output_skip.size()[3]),mode='bilinear') #[1,32,64,128] 这个太稀疏了
 
-        output_branch1 = self.branch1(output_skip)
-        output_branch1 = F.upsample(output_branch1, (output_skip.size()[2],output_skip.size()[3]),mode='bilinear')
+        output_branch2 = self.branch2(output_skip) #[1,32,2,4]
+        output_branch2 = F.upsample(output_branch2, (output_skip.size()[2],output_skip.size()[3]),mode='bilinear') #[1,32,64,128]
 
-        output_branch2 = self.branch2(output_skip)
-        output_branch2 = F.upsample(output_branch2, (output_skip.size()[2],output_skip.size()[3]),mode='bilinear')
+        output_branch3 = self.branch3(output_skip) #[1,32,4,8]
+        output_branch3 = F.upsample(output_branch3, (output_skip.size()[2],output_skip.size()[3]),mode='bilinear') #[1,32,64,128]
 
-        output_branch3 = self.branch3(output_skip)
-        output_branch3 = F.upsample(output_branch3, (output_skip.size()[2],output_skip.size()[3]),mode='bilinear')
+        output_branch4 = self.branch4(output_skip) #[1,32,8,16]
+        output_branch4 = F.upsample(output_branch4, (output_skip.size()[2],output_skip.size()[3]),mode='bilinear') #[1,32,64,128]
 
-        output_branch4 = self.branch4(output_skip)
-        output_branch4 = F.upsample(output_branch4, (output_skip.size()[2],output_skip.size()[3]),mode='bilinear')
-
-        output_feature = torch.cat((output_raw, output_skip, output_branch4, output_branch3, output_branch2, output_branch1), 1)
-        output_feature = self.lastconv(output_feature)
+        output_feature = torch.cat((output_raw, output_skip, output_branch4, output_branch3, output_branch2, output_branch1), 1) #[1,320,64,128]
+        output_feature = self.lastconv(output_feature) #[1,32,64,128]
 
         return output_feature
 
