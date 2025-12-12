@@ -2,6 +2,7 @@ import torch
 import argparse
 from models import *
 
+@torch.no_grad()
 def evaluate_time(Net,imgL,imgR,device,**kwargs):
     import time
 
@@ -18,6 +19,7 @@ def evaluate_time(Net,imgL,imgR,device,**kwargs):
 
     return avg_run_time
 
+@torch.no_grad()
 def evaluate_flops(Net,input,device,**kwargs):
 
     from fvcore.nn import FlopCountAnalysis
