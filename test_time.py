@@ -5,10 +5,6 @@ from models import *
 def evaluate_time(Net,imgL,imgR,device,**kwargs):
     import time
 
-    Net = Net.to(device)
-    imgL = imgL.to(device)
-    imgR = imgR.to(device)
-
     for i in range(10):
         preds = Net(imgL, imgR)
 
@@ -23,8 +19,6 @@ def evaluate_time(Net,imgL,imgR,device,**kwargs):
     return avg_run_time
 
 def evaluate_flops(Net,input,device,**kwargs):
-    Net = Net.to(device)
-    # input = input.to(device)
 
     from fvcore.nn import FlopCountAnalysis
     flops = FlopCountAnalysis(Net,input)   # FLOPs（乘加=2）
@@ -45,7 +39,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-mixup_alpha', default=0.5, type=float)
     parser.add_argument('-grad_clip_value', default=1., type=float)
-    parser.add_argument('-device', default='cpu', type=str) #cuda:0, cpu
+    parser.add_argument('-device', default='cuda', type=str) #cuda:0, cpu
 
     args = parser.parse_args()
 
@@ -56,8 +50,12 @@ if __name__ == '__main__':
     imgL = torch.randn(1,3,544,960)
     imgR = torch.randn(1,3,544,960)
 
-    # avg_run_time = evaluate_time(Net=Net,imgL=imgL,imgR=imgR,device=args.device)
+    Net = Net.to(args.device)
+    imgL = imgL.to(args.device)
+    imgR = imgR.to(args.device)
+
+    avg_run_time = evaluate_time(Net=Net,imgL=imgL,imgR=imgR,device=args.device)
     total_flops,total_params = evaluate_flops(Net,input=(imgL,imgL),device=args.device)
 
-    # print(avg_run_time)
+    print(avg_run_time)
     print(f"\nFLOPs: {total_flops/1e9:.2f} GFLOPs, parameters: {total_params / 1e6:.2f} M")
