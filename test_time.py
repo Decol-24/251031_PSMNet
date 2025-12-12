@@ -22,12 +22,12 @@ def evaluate_time(Net,imgL,imgR,device,**kwargs):
 
     return avg_run_time
 
-def flops(Net,device):
+def evaluate_flops(Net,input,device,**kwargs):
     Net = Net.to(device)
-    input = torch.randn(1,3,256,512).to(device)
+    # input = input.to(device)
 
     from fvcore.nn import FlopCountAnalysis
-    flops = FlopCountAnalysis(Net, (input, input))   # FLOPs（乘加=2）
+    flops = FlopCountAnalysis(Net,input)   # FLOPs（乘加=2）
     total_flops = flops.total()
 
     total_params = sum(p.numel() for p in Net.parameters())
@@ -53,11 +53,11 @@ if __name__ == '__main__':
     #model
     Net = stackhourglass(args.maxdisp)
 
-    imgL = torch.randn(1,3,256,512)
-    imgR = torch.randn(1,3,256,512)
+    imgL = torch.randn(1,3,544,960)
+    imgR = torch.randn(1,3,544,960)
 
-    avg_run_time = evaluate_time(Net=Net,imgL=imgL,imgR=imgR,device=args.device)
-    total_flops,total_params = flops(Net,args.device)
+    # avg_run_time = evaluate_time(Net=Net,imgL=imgL,imgR=imgR,device=args.device)
+    total_flops,total_params = evaluate_flops(Net,input=(imgL,imgL),device=args.device)
 
-    print(avg_run_time)
+    # print(avg_run_time)
     print(f"\nFLOPs: {total_flops/1e9:.2f} GFLOPs, parameters: {total_params / 1e6:.2f} M")
