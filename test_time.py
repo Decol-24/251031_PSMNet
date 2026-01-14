@@ -6,7 +6,7 @@ from models import *
 def evaluate_time(Net,imgL,imgR,device,**kwargs):
     import time
 
-    for i in range(10):
+    for i in range(30):
         preds = Net(imgL, imgR)
 
     times = 30
