@@ -7,12 +7,14 @@ def evaluate_time(Net,imgL,imgR,device,**kwargs):
     import time
 
     for i in range(30):
-        preds = Net(imgL, imgR)
+        with torch.amp.autocast('cuda',enabled=True):
+            preds = Net(imgL, imgR)
 
-    times = 30
+    times = 50
     start = time.perf_counter()
     for i in range(times):
-        preds = Net(imgL, imgR)
+        with torch.amp.autocast('cuda',enabled=True):
+            preds = Net(imgL, imgR)
     end = time.perf_counter()
 
     avg_run_time = (end - start) / times
