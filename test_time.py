@@ -53,14 +53,34 @@ def evaluate_flops(Net,input,device,**kwargs):
 
     return total_flops,total_params
 
+@torch.no_grad()
+def max_memory(Net,imgL,imgR,device,**kwargs):
+    Net = Net.to(device)
+
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
+
+    # 预热
+    for _ in range(30):
+        with torch.amp.autocast('cuda',enabled=True):
+            Net(imgL, imgR)
+
+    torch.cuda.synchronize()
+    torch.cuda.reset_peak_memory_stats()
+
+    for _ in range(50):
+        with torch.amp.autocast('cuda',enabled=True):
+            Net(imgL, imgR)
+
+    torch.cuda.synchronize()
+    print(torch.cuda.max_memory_allocated()/1024**2)
+
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--maxdisp', type=int ,default=192,
                         help='maxium disparity')
-
     parser.add_argument('-batch_size', default=1, type=int)
-
     parser.add_argument('-mixup_alpha', default=0.5, type=float)
     parser.add_argument('-device', default='cuda', type=str) #cuda:0, cpu
     args = parser.parse_args()
@@ -76,8 +96,9 @@ if __name__ == '__main__':
     imgL = imgL.to(args.device)
     imgR = imgR.to(args.device)
 
-    avg_run_time = evaluate_time(Net=Net,imgL=imgL,imgR=imgR,device=args.device,amp=amp)
-    total_flops,total_params = evaluate_flops(Net,input=(imgL,imgL),device=args.device)
+    # avg_run_time = evaluate_time(Net=Net,imgL=imgL,imgR=imgR,device=args.device,amp=amp)
+    # total_flops,total_params = evaluate_flops(Net,input=(imgL,imgL),device=args.device)
 
-    print(avg_run_time)
-    print(f"\nFLOPs: {total_flops/1e9:.2f} GFLOPs, parameters: {total_params / 1e6:.2f} M")
+    # print(avg_run_time)
+    # print(f"\nFLOPs: {total_flops/1e9:.2f} GFLOPs, parameters: {total_params / 1e6:.2f} M")
+    max_memory(Net=Net,imgL=imgL,imgR=imgR,device=args.device)
